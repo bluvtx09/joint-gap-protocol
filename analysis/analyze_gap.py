@@ -29,7 +29,7 @@ xlsx도 읽는다. 확장자로 자동 판별한다.
 q_cmd는 반드시 **제어 주기와 같은 속도로** 기록한다. 제어를 1kHz로 돌리면서
 로그만 200Hz로 남기면, 분석 쪽은 명령이 5ms 동안 계단처럼 유지된 줄 알고
 재생한다. 그 차이가 고주파 궤적에서 구조 잔차로 둔갑한다.
-데모에서 chirp/high 조건의 구조 잔차 33%가 정확히 이 현상이다.
+데모에서 chirp/high 조건의 구조 잔차 37%가 정확히 이 현상이다 (명령을 전부 남기면 0%).
 로그를 줄여야 하면 q_link만 솎고 q_cmd는 전부 남긴다.
 
 사용법
@@ -94,7 +94,7 @@ def build_model(p, k, dt):
         rho_rod=1200.0 * p["rho"], rho_tip=2700.0 * p["rho"], tmax=TAU_MAX))
 
 
-def replay(p, k, t, q_cmd):
+def replay(p, k, t, q_cmd, refine=1):
     """실제로 준 명령을 그대로 재생해 시뮬 궤적을 만든다.
 
     합성 궤적이 아니라 실험에서 기록된 q_cmd를 쓰는 것이 중요하다.
@@ -103,9 +103,11 @@ def replay(p, k, t, q_cmd):
     주의: 데이터 샘플링 주기와 시뮬 적분 주기는 별개다. 200Hz로 기록했다고
     5ms로 적분하면 적분 오차가 물리 오차로 둔갑한다. 내부는 항상 1ms 이하로
     쪼개 돌리고, 기록 시점에만 값을 꺼낸다.
+
+    refine: 내부 적분 간격을 몇 배 더 쪼갤지. 수치 오차를 잴 때만 2, 4로 쓴다.
     """
     dt_data = float(np.median(np.diff(t)))
-    sub = max(1, int(np.ceil(dt_data / 1e-3)))
+    sub = max(1, int(np.ceil(dt_data / 1e-3))) * refine
     dt = dt_data / sub
 
     model = build_model(p, k, dt)
@@ -188,12 +190,22 @@ def analyze(comp_rows, traj_rows, noise=0.0):
             p[name] = measured[name]
             contrib[name] = 100.0 * (gap0 - rmse(replay(p, k, t, q_cmd), q_meas)) / gap0
 
-        gap_all = rmse(replay(measured, k, t, q_cmd), q_meas)
+        q_all = replay(measured, k, t, q_cmd)
+        gap_all = rmse(q_all, q_meas)
         residual = 100.0 * gap_all / gap0
+
+        # 수치 오차: 같은 시뮬을 적분 간격 1/2, 1/4로 다시 돌려 차이로 추정한다
+        # (SimDiff 자기 불일치. implicitfast는 1차 정확도라 오차 ≈ 2 x |q(dt) - q(dt/2)|).
+        # 이 몫은 파라미터도 모델 구조도 아닌, 적분 설정 탓이다.
+        q_half = replay(measured, k, t, q_cmd, refine=2)
+        q_quarter = replay(measured, k, t, q_cmd, refine=4)
+        d1, d2 = rmse(q_all, q_half), rmse(q_half, q_quarter)
+        num_pct = 100.0 * 2.0 * d1 / gap0
+        num_order = float(np.log2(d1 / d2)) if d1 > 0 and d2 > 0 else float("nan")
 
         noise_pct = 100.0 * noise / gap0 if gap0 > 0 else 0.0
         per_cond.setdefault((exc, level), []).append(
-            (gap0, contrib, residual, noise_pct))
+            (gap0, contrib, residual, noise_pct, num_pct, num_order))
 
     # 반복 시행 평균
     out = {}
@@ -203,6 +215,8 @@ def analyze(comp_rows, traj_rows, noise=0.0):
         contrib = {c: sum(x[1][c] for x in trials) / n for c in COMPONENTS}
         residual = sum(x[2] for x in trials) / n
         noise_pct = sum(x[3] for x in trials) / n
+        num_pct = sum(x[4] for x in trials) / n
+        num_order = float(np.nanmean([x[5] for x in trials]))
         # 유의성 문턱: 같은 조건을 반복했을 때 기여도가 얼마나 흔들리는가.
         # 이보다 작은 기여도는 노이즈와 구분되지 않으므로 순위를 매기지 않는다.
         if n >= 3:
@@ -212,8 +226,19 @@ def analyze(comp_rows, traj_rows, noise=0.0):
             thresh = 2.0 * spread
         else:
             thresh = noise_pct          # 반복이 부족하면 노이즈 몫으로 대체
-        out[key] = (gap0, contrib, residual, noise_pct, n, thresh)
+        out[key] = (gap0, contrib, residual, noise_pct, n, thresh, num_pct, num_order)
     return out
+
+
+def structural(residual, noise_pct, num_pct):
+    """구조 잔차 = 잔차에서 노이즈 몫과 수치 오차 몫을 제곱합으로 뺀 나머지.
+
+    잔차는 RMS라서 서로 독립인 오차는 제곱해서 더해진다: 잔차² ≈ 노이즈² + 수치² + 구조².
+    그냥 빼면(잔차 − 노이즈 − 수치) 구조 잔차를 과소평가한다. 명령을 전부 기록해
+    구조 잔차가 0이어야 하는 데모에서, 잔차 8.8% = √(노이즈 2.8² + 실제 수치 오차 8.5²) = 8.9%로
+    제곱합이 맞았다 (numerical_share_check.py 2부).
+    """
+    return float(np.sqrt(max(0.0, residual ** 2 - noise_pct ** 2 - num_pct ** 2)))
 
 
 def ranked(contrib, thresh=0.0):
@@ -233,19 +258,19 @@ def report(results):
     for exc in excs:
         print(f"\n--- 궤적: {exc} ---")
         print(f"{'':8s}" + "".join(f"{c:>9s}" for c in COMPONENTS)
-              + f"{'잔차':>9s}{'노이즈':>9s}{'구조':>8s}{'문턱':>8s}")
+              + f"{'잔차':>9s}{'노이즈':>9s}{'수치':>8s}{'구조':>8s}{'문턱':>8s}{'차수':>7s}")
         for lv in levels:
             if (exc, lv) not in results:
                 continue
-            gap0, contrib, residual, noise_pct, n, thresh = results[(exc, lv)]
-            struct = max(0.0, residual - noise_pct)
+            gap0, contrib, residual, noise_pct, n, thresh, num_pct, num_order = results[(exc, lv)]
+            struct = structural(residual, noise_pct, num_pct)
             print(f"{lv:8s}" + "".join(f"{contrib[c]:9.1f}" for c in COMPONENTS)
-                  + f"{residual:9.1f}{noise_pct:9.1f}{struct:8.1f}{thresh:8.1f}")
+                  + f"{residual:9.1f}{noise_pct:9.1f}{num_pct:8.2f}{struct:8.1f}{thresh:8.1f}{num_order:7.2f}")
         print("  순위:")
         for lv in levels:
             if (exc, lv) not in results:
                 continue
-            _, contrib, _, _, _, th = results[(exc, lv)]
+            _, contrib, _, _, _, th, _, _ = results[(exc, lv)]
             order = ranked(contrib, th)
             drop = [c for c in COMPONENTS if c not in order]
             line = ' > '.join(order) if order else "(전부 문턱 미만)"
@@ -268,11 +293,15 @@ def report(results):
               f"{'불변' if len(orders) == 1 else '바뀜'}")
 
     print("\n  빈 순위 칸은 기여도가 문턱 미만이라 순서를 매길 수 없다는 뜻이다.")
-    worst = max(results.values(), key=lambda v: max(0.0, v[2] - v[3]))
-    struct = max(0.0, worst[2] - worst[3])
+    worst = max(results.values(), key=lambda v: structural(v[2], v[3], v[6]))
+    struct = structural(worst[2], worst[3], worst[6])
     print(f"\n  최대 구조 잔차: {struct:.1f} %")
+    num_max = max(v[6] for v in results.values())
+    orders = [v[7] for v in results.values() if np.isfinite(v[7])]
+    print(f"  최대 수치 오차 몫: {num_max:.2f} %  (관측 차수 {min(orders):.2f}~{max(orders):.2f}, 이론 1)")
     print("  잔차 = 모든 성분을 실측값으로 바꿔도 남는 갭.")
-    print("  그중 노이즈로 설명되는 몫을 뺀 나머지가 구조 잔차다.")
+    print("  그중 노이즈 몫과 수치 오차 몫(적분 간격을 1/2로 줄여 잰 값)을 제곱합으로 뺀 나머지가 구조 잔차다.")
+    print("  관측 차수가 1에서 크게 벗어나면 수치 오차 추정을 믿기 어렵다.")
     print("  구조 잔차가 크면 파라미터가 아니라 모델 구조가 문제라는 뜻이며,")
     print("  그 자체가 이 연구의 결과다. 노이즈 몫은 Phase 0에서 잰")
     print("  엔코더 표준편차(--noise)로 계산하므로 반드시 넣어야 한다.")
@@ -280,15 +309,16 @@ def report(results):
     with open("gap_decomposition.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
         w.writerow(["excitation", "level", "component", "contribution_pct",
-                    "rank", "residual_pct", "noise_pct", "structural_pct",
-                    "baseline_gap_rad", "n_trials"])
-        for (exc, lv), (gap0, contrib, residual, noise_pct, n, th) in sorted(results.items()):
+                    "rank", "residual_pct", "noise_pct", "numerical_pct", "numerical_order",
+                    "structural_pct", "baseline_gap_rad", "n_trials"])
+        for (exc, lv), (gap0, contrib, residual, noise_pct, n, th, num_pct, num_order) in sorted(results.items()):
             order = ranked(contrib, th)
             for c in COMPONENTS:
                 w.writerow([exc, lv, c, f"{contrib[c]:.3f}",
                             order.index(c) + 1 if c in order else "",
                             f"{residual:.3f}", f"{noise_pct:.3f}",
-                            f"{max(0.0, residual - noise_pct):.3f}",
+                            f"{num_pct:.4f}", f"{num_order:.3f}",
+                            f"{structural(residual, noise_pct, num_pct):.3f}",
                             f"{gap0:.6f}", n])
     print("\n  gap_decomposition.csv 저장 완료")
 
@@ -296,8 +326,12 @@ def report(results):
 # ----------------------------------------------------------------------
 # 데모 — 실물 데이터가 없어도 파이프라인이 도는지 확인한다
 # ----------------------------------------------------------------------
-def make_demo():
-    """참값을 알고 있는 합성 데이터를 만든다. 코드 검증용."""
+def make_demo(log_every=5, noise_std=0.0015):
+    """참값을 알고 있는 합성 데이터를 만든다. 코드 검증용.
+
+    log_every=5: 1 kHz 제어를 200 Hz로 솎아 기록 (규칙 3 위반 상황). 1이면 전부 기록.
+    noise_std: 엔코더 노이즈 표준편차 [rad]. 0이면 구조 잔차를 노이즈 없이 직접 볼 수 있다.
+    """
     truth = {"low": ({"Ia": 3.1e-4, "d": 0.031, "tau_f": 0.048,
                       "b_s": 0.0034, "rho": 1.12}, 0.40),
              "mid": ({"Ia": 3.1e-4, "d": 0.031, "tau_f": 0.048,
@@ -319,10 +353,12 @@ def make_demo():
                 q_cmd = 0.25 * np.sin(2 * np.pi * 0.15 * t)
             else:
                 q_cmd = 0.05 * np.minimum(np.floor(t / 1.0) + 1, 5)
-            q_true = replay(p, k, t, q_cmd)
+            # 실물은 연속 시간이므로 참값은 아주 촘촘한 간격(1/8 ms)으로 만든다.
+            # 참값을 분석과 같은 1 ms로 만들면 둘이 같은 적분 오차를 공유해 수치 오차가 갭에 안 보인다.
+            q_true = replay(p, k, t, q_cmd, refine=8)
             for trial in (1, 2):
-                q_meas = q_true + rng.normal(0, 0.0015, len(t))  # 엔코더 노이즈
-                for i in range(0, len(t), 5):                    # 200Hz로 솎음
+                q_meas = q_true + rng.normal(0, noise_std, len(t))  # 엔코더 노이즈
+                for i in range(0, len(t), log_every):            # 기본 200Hz로 솎음
                     traj_rows.append({"excitation": exc, "level": lv, "trial": trial,
                                       "t": t[i], "q_cmd": q_cmd[i], "q_link": q_meas[i]})
     return comp_rows, traj_rows

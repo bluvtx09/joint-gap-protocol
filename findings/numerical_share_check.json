@@ -1,0 +1,266 @@
+{
+ "part1_estimate": {
+  "summary": {
+   "n": 9,
+   "ratio_median": 0.874,
+   "ratio_min": 0.865,
+   "ratio_max": 0.875,
+   "within_0.5_2x": 9,
+   "numerical_pct_of_gap_max": 8.38,
+   "numerical_pct_of_gap_median": 1.5
+  },
+  "rows": [
+   {
+    "level": "low",
+    "excitation": "chirp",
+    "actual_rad": 0.002027164949599023,
+    "estimate_rad": 0.002317365623524829,
+    "ratio": 0.8747713045452031,
+    "observed_order": 1.0010603651181709,
+    "pct_of_baseline_gap": 1.0237815498487846
+   },
+   {
+    "level": "low",
+    "excitation": "slow",
+    "actual_rad": 7.158175414385655e-05,
+    "estimate_rad": 8.189656100684556e-05,
+    "ratio": 0.8740507936331195,
+    "observed_order": 1.003184158835435,
+    "pct_of_baseline_gap": 0.45610595446607016
+   },
+   {
+    "level": "low",
+    "excitation": "stair",
+    "actual_rad": 0.00010204640710464126,
+    "estimate_rad": 0.00011670501612113709,
+    "ratio": 0.8743960670783805,
+    "observed_order": 1.0019853742713507,
+    "pct_of_baseline_gap": 0.5755127048029693
+   },
+   {
+    "level": "mid",
+    "excitation": "chirp",
+    "actual_rad": 0.004200808136099757,
+    "estimate_rad": 0.004830539185634143,
+    "ratio": 0.8696354536555289,
+    "observed_order": 1.019178034302891,
+    "pct_of_baseline_gap": 2.0088204992778067
+   },
+   {
+    "level": "mid",
+    "excitation": "slow",
+    "actual_rad": 4.9933712496466304e-05,
+    "estimate_rad": 5.724565580464113e-05,
+    "ratio": 0.872270773993264,
+    "observed_order": 1.0081123472361848,
+    "pct_of_baseline_gap": 0.8101963122439113
+   },
+   {
+    "level": "mid",
+    "excitation": "stair",
+    "actual_rad": 0.00011078712632010384,
+    "estimate_rad": 0.00012681245428548674,
+    "ratio": 0.8736296994196969,
+    "observed_order": 1.00452692721198,
+    "pct_of_baseline_gap": 1.5006300460934692
+   },
+   {
+    "level": "high",
+    "excitation": "chirp",
+    "actual_rad": 0.00454062331179938,
+    "estimate_rad": 0.005248669071961049,
+    "ratio": 0.8650999423941348,
+    "observed_order": 1.0345658058070952,
+    "pct_of_baseline_gap": 8.37573200837298
+   },
+   {
+    "level": "high",
+    "excitation": "slow",
+    "actual_rad": 3.779380673700153e-05,
+    "estimate_rad": 4.3264431484111215e-05,
+    "ratio": 0.8735537586084134,
+    "observed_order": 1.0040485974564655,
+    "pct_of_baseline_gap": 1.6510944628671382
+   },
+   {
+    "level": "high",
+    "excitation": "stair",
+    "actual_rad": 9.767479631036907e-05,
+    "estimate_rad": 0.00011204471560949083,
+    "ratio": 0.8717483531378204,
+    "observed_order": 1.0106882119219949,
+    "pct_of_baseline_gap": 4.270683857248815
+   }
+  ]
+ },
+ "part2_decomposition": {
+  "n": 9,
+  "median_abs_err_linear_pctpt": 0.82,
+  "median_abs_err_quadrature_pctpt": 0.06,
+  "max_structural_new": 4.19,
+  "rows": [
+   {
+    "excitation": "chirp",
+    "level": "high",
+    "residual": 8.803577174424367,
+    "noise": 2.765915828347091,
+    "numerical": 9.67825124259527,
+    "linear": 11.234385665617953,
+    "quadrature": 8.90871886155733,
+    "structural_new": 0.0
+   },
+   {
+    "excitation": "chirp",
+    "level": "low",
+    "residual": 1.2740195040581117,
+    "noise": 0.7575418571262202,
+    "numerical": 1.1703343053903073,
+    "linear": 1.781584374342739,
+    "quadrature": 1.2737867727235148,
+    "structural_new": 0.0
+   },
+   {
+    "excitation": "chirp",
+    "level": "mid",
+    "residual": 2.1359698941011103,
+    "noise": 0.7172601628220241,
+    "numerical": 2.309835548537409,
+    "linear": 2.738366267792257,
+    "quadrature": 2.144605331691457,
+    "structural_new": 0.0
+   },
+   {
+    "excitation": "slow",
+    "level": "high",
+    "residual": 55.167954407816566,
+    "noise": 54.98560785460262,
+    "numerical": 1.5859473757584417,
+    "linear": 56.37331180839126,
+    "quadrature": 55.003116215388175,
+    "structural_new": 4.191764941419641
+   },
+   {
+    "excitation": "slow",
+    "level": "low",
+    "residual": 9.457638155115458,
+    "noise": 9.5108586048678,
+    "numerical": 0.5192710746406919,
+    "linear": 9.965220795178405,
+    "quadrature": 9.521705540593645,
+    "structural_new": 0.0
+   },
+   {
+    "excitation": "slow",
+    "level": "mid",
+    "residual": 23.613081571423187,
+    "noise": 23.642183932002368,
+    "numerical": 0.9022748825609497,
+    "linear": 24.4316744542432,
+    "quadrature": 23.655362105859616,
+    "structural_new": 0.0
+   },
+   {
+    "excitation": "stair",
+    "level": "high",
+    "residual": 55.0227872588471,
+    "noise": 54.99638923922073,
+    "numerical": 4.108036527904899,
+    "linear": 58.59092120113752,
+    "quadrature": 55.11373231216623,
+    "structural_new": 0.0
+   },
+   {
+    "excitation": "stair",
+    "level": "low",
+    "residual": 8.491151076587519,
+    "noise": 8.427665097638085,
+    "numerical": 0.6557005273889314,
+    "linear": 9.001403059103401,
+    "quadrature": 8.447171967373077,
+    "structural_new": 0.8025985458920851
+   },
+   {
+    "excitation": "stair",
+    "level": "mid",
+    "residual": 19.864333233816637,
+    "noise": 19.902736377349044,
+    "numerical": 1.6826098980057795,
+    "linear": 21.3750200381041,
+    "quadrature": 19.95711738914163,
+    "structural_new": 0.0
+   }
+  ]
+ },
+ "part3_structural_under_noise": {
+  "n": 9,
+  "median_abs_err_old_pctpt": 5.66,
+  "max_abs_err_old_pctpt": 27.14,
+  "median_abs_err_new_pctpt": 0.06,
+  "max_abs_err_new_pctpt": 2.91,
+  "rows": [
+   {
+    "excitation": "chirp",
+    "level": "high",
+    "truth": 37.39951243764989,
+    "old": 37.08680744415196,
+    "new": 37.340544103597445
+   },
+   {
+    "excitation": "chirp",
+    "level": "low",
+    "truth": 9.263718414539941,
+    "old": 8.915245639778917,
+    "new": 9.272312939372961
+   },
+   {
+    "excitation": "chirp",
+    "level": "mid",
+    "truth": 15.333989169754503,
+    "old": 15.347614818084088,
+    "new": 15.35888384087032
+   },
+   {
+    "excitation": "slow",
+    "level": "high",
+    "truth": 19.99763885599193,
+    "old": 3.986031895484402,
+    "new": 18.955793563501626
+   },
+   {
+    "excitation": "slow",
+    "level": "low",
+    "truth": 10.409636694948961,
+    "old": 4.745651330292587,
+    "new": 10.35527230048991
+   },
+   {
+    "excitation": "slow",
+    "level": "mid",
+    "truth": 15.294165146742664,
+    "old": 4.678843936283311,
+    "new": 14.759063878988904
+   },
+   {
+    "excitation": "stair",
+    "level": "high",
+    "truth": 44.87269523499202,
+    "old": 17.736156971576918,
+    "new": 41.96336648049231
+   },
+   {
+    "excitation": "stair",
+    "level": "low",
+    "truth": 12.544614990948821,
+    "old": 7.0328512620864325,
+    "new": 12.603217142570543
+   },
+   {
+    "excitation": "stair",
+    "level": "mid",
+    "truth": 22.578693358171954,
+    "old": 11.576829961610883,
+    "new": 23.09142798794543
+   }
+  ]
+ }
+}
